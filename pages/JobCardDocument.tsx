@@ -126,7 +126,14 @@ const JobCardDocument: React.FC = () => {
                     <div className="border border-gray-300 p-4">
                         <h3 className="text-xs font-bold uppercase text-gray-400 mb-2">Vehicle Details</h3>
                         <p className="text-xl font-bold">{job.brand} {job.model}</p>
-                        <p className="text-lg font-mono uppercase bg-gray-100 inline-block px-2 rounded mt-1">{job.numberPlate}</p>
+                        <div className="flex items-center gap-4 mt-1">
+                            {job.numberPlate && (
+                                <p className="text-lg font-mono uppercase bg-gray-100 inline-block px-2 rounded border border-gray-200">{job.numberPlate}</p>
+                            )}
+                            {job.km && (
+                                <p className="text-sm font-bold text-gray-600">KM: <span className="font-mono text-gray-900">{job.km}</span></p>
+                            )}
+                        </div>
                     </div>
                 </div>
 

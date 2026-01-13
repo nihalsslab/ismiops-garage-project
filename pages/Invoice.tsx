@@ -218,9 +218,17 @@ const Invoice: React.FC = () => {
             <h4 className="text-xs print:text-[8px] font-bold uppercase text-slate-400 tracking-wider">Vehicle Details</h4>
             <div className="bg-gray-50 rounded-lg p-4 print:p-2 border border-gray-100">
               <p className="font-bold text-slate-900 text-lg print:text-xs">{job.brand} {job.model}</p>
-              <p className="text-slate-600 text-sm print:text-[9px] mt-1 print:mt-0">{job.vehicle || `${job.brand} ${job.model}`}
-                {job.fuelType && <span className="ml-2 text-xs print:text-[8px] text-gray-400">({job.fuelType})</span>}
-              </p>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
+                {job.numberPlate && (
+                  <span className="font-mono bg-gray-100 border border-gray-200 px-1.5 rounded text-sm print:text-[9px] uppercase font-bold text-slate-700">{job.numberPlate}</span>
+                )}
+                {job.km && (
+                  <span className="text-slate-500 text-xs print:text-[8px] font-bold">KM: {job.km}</span>
+                )}
+                <span className="text-slate-600 text-sm print:text-[9px]">{job.vehicle || `${job.brand} ${job.model}`}
+                  {job.fuelType && <span className="ml-1 text-xs print:text-[8px] text-gray-400">({job.fuelType})</span>}
+                </span>
+              </div>
             </div>
           </div>
         </div>
