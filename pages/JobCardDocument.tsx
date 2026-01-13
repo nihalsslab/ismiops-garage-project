@@ -22,17 +22,41 @@ const JobCardDocument: React.FC = () => {
     }, [loading, job]);
 
     const fetchJobDetails = async () => {
-        const res = await api.getJobs();
-        if (res.status === 'success') {
-            const found = res.data.find((j: any) => j.id === id);
-            if (found) {
-                setJob(found);
-            } else {
-                alert('Job not found!');
-                navigate('/jobs');
+        try {
+            const res = await api.getJobs();
+            if (res.status === 'success') {
+                const found = res.data.find((j: any) => j.id === id);
+                if (found) {
+                    // Robust parsing for potentially stringified arrays
+                    ['lineItems', 'complaints', 'vehicleImages'].forEach(field => {
+                        if (typeof found[field] === 'string') {
+                            try {
+                                found[field] = JSON.parse(found[field]);
+                            } catch (e) {
+                                found[field] = [];
+                            }
+                        }
+                        if (!Array.isArray(found[field])) {
+                            found[field] = [];
+                        }
+                    });
+
+                    // Ensure defaults
+                    if (!found.vehicleImages) found.vehicleImages = [];
+                    if (!found.complaints) found.complaints = [];
+                    // lineItems might be undefined, that's fine as long as it's not a string
+
+                    setJob(found);
+                } else {
+                    alert('Job not found!');
+                    navigate('/jobs');
+                }
             }
+        } catch (error) {
+            console.error("Error fetching job card:", error);
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     };
 
     const handlePrint = () => window.print();
@@ -65,20 +89,29 @@ const JobCardDocument: React.FC = () => {
             <div className="border border-gray-900 p-8 print:border-2 print:p-0 print:border-none">
                 {/* Title Header */}
                 <div className="flex justify-between items-start border-b-2 border-gray-900 pb-6 mb-8">
-                    <div>
-                        <div className="flex items-center gap-3">
-                            <img src={logo} alt="Logo" className="h-16 w-16 object-cover rounded-full border border-gray-900" />
-                            <div>
-                                <h1 className="text-4xl font-black uppercase tracking-tighter text-gray-900">Job Card</h1>
-                                <p className="text-gray-500 font-mono mt-1">#{job.id}</p>
-                            </div>
+                    {/* Left: Title & ID */}
+                    <div className="flex items-center gap-4">
+                        <div className="h-16 w-16 bg-gray-900 rounded-full flex items-center justify-center text-white">
+                            <span className="material-symbols-outlined text-3xl">directions_car</span>
+                        </div>
+                        <div>
+                            <h1 className="text-4xl font-black uppercase tracking-tighter text-gray-900 leading-none">Job Card</h1>
+                            <p className="text-gray-500 font-mono text-lg font-bold">#{job.id}</p>
                         </div>
                     </div>
+
+                    {/* Right: Logo & Address */}
                     <div className="text-right flex flex-col items-end">
-                        <h2 className="text-[#F4B400] text-xl font-black leading-none uppercase tracking-wide">PHOENIX</h2>
-                        <h3 className="text-black text-xs font-bold leading-tight uppercase tracking-wider mb-1">MULTY BRAND GARAGE</h3>
-                        <p className="text-sm text-gray-600">123 Garage Lane, Phoenix, AZ</p>
-                        <p className="text-sm text-gray-600">Date: <span className="font-bold">{job.date}</span></p>
+                        <div className="flex items-center justify-end gap-2 mb-2">
+                            {/* Small Logo next to Brand Name if desired, or just Brand Name */}
+                            <img src={logo} alt="Logo" className="h-8 w-8 object-cover rounded-full" />
+                            <div>
+                                <h2 className="text-[#F4B400] text-xl font-black leading-none uppercase tracking-wide">PHOENIX</h2>
+                                <h3 className="text-black text-[10px] font-bold leading-tight uppercase tracking-wider">MULTY BRAND GARAGE</h3>
+                            </div>
+                        </div>
+                        <p className="text-xs text-gray-600">123 Garage Lane, Phoenix, AZ</p>
+                        <p className="text-xs text-gray-600">Date: <span className="font-bold">{job.date}</span></p>
                     </div>
                 </div>
 
@@ -155,13 +188,7 @@ const JobCardDocument: React.FC = () => {
                             )}
 
                             {/* Empty rows for manual entry */}
-                            {[1, 2, 3].map((_, i) => (
-                                <tr key={`empty-${i}`} className="border-b border-gray-900 h-12">
-                                    <td className="border-r border-gray-900"></td>
-                                    <td className="border-r border-gray-900"></td>
-                                    <td></td>
-                                </tr>
-                            ))}
+
                         </tbody>
                     </table>
 
@@ -173,27 +200,54 @@ const JobCardDocument: React.FC = () => {
                     )}
                 </div>
 
-                {/* Vehicle Images */}
-                {job.vehicleImages && job.vehicleImages.length > 0 && (
-                    <div className="mb-8">
-                        <h3 className="text-lg font-bold uppercase border-b border-gray-900 pb-2 mb-4">Vehicle Inspection Images</h3>
-                        <div className="grid grid-cols-4 gap-4">
-                            {job.vehicleImages.map((img, i) => (
-                                <div key={i} className="aspect-square border border-gray-200 rounded overflow-hidden">
-                                    <img src={img} alt="Vehicle" className="w-full h-full object-cover grayscale contrast-125" />
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
+
 
                 {/* Mechanic Section (Empty for writing) */}
-                <div className="mt-12 pt-4 border-t-2 border-dashed border-gray-300">
-                    <h3 className="text-sm font-bold uppercase text-gray-400 mb-4">Mechanic Notes / Work Done</h3>
-                    <div className="h-40 border border-gray-200 rounded bg-gray-50/50"></div>
+                {/* Mechanic Section (Writing Lines) */}
+                <div className="mt-8">
+                    <h3 className="text-xs font-bold uppercase text-gray-400 mb-2 border-b border-gray-100 pb-2">Mechanic Notes / Work Done</h3>
+                    <div className="border border-gray-200 rounded-lg p-6 bg-white">
+                        {[1, 2, 3, 4, 5].map(i => (
+                            <div key={i} className="border-b border-gray-100 h-10"></div>
+                        ))}
+                    </div>
+                </div>
+
+                <div className="flex justify-between items-end mt-8 pt-4 border-t border-gray-900">
+                    <p className="text-[10px] text-gray-400 font-bold uppercase">Printed On: {new Date().toLocaleDateString()}</p>
+                    <p className="text-[10px] text-gray-400 font-bold uppercase">Phoenix Multi-Brand Garage © {new Date().getFullYear()}</p>
                 </div>
 
             </div>
+
+            <style>{`
+                @media print {
+                    @page {
+                        margin: 0;
+                        size: auto;
+                    }
+                    body {
+                        margin: 0;
+                        padding: 0;
+                    }
+                    /* Reset container heights/overflows to prevent scrollbars */
+                    html, body, #root, main, div {
+                        overflow: visible !important;
+                        height: auto !important;
+                    }
+                    /* Ensure the document wrapper handles the margins */
+                    .print\\:p-0 {
+                        padding: 40px !important; /* Internal padding for the paper */
+                    }
+                    .print\\:border-none {
+                        border: none !important;
+                    }
+                    /* Hide any scrollbar artifacts */
+                    ::-webkit-scrollbar {
+                        display: none;
+                    }
+                }
+            `}</style>
         </div>
     );
 };

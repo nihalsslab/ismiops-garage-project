@@ -156,7 +156,7 @@ const JobList: React.FC = () => {
                     <div className="flex items-center justify-end gap-2">
                       {/* View Button */}
                       <button
-                        onClick={() => navigate(`/invoice/${job.id}`)}
+                        onClick={() => navigate(`/jobs/${job.id}`)}
                         className="p-1.5 rounded-full text-gray-400 hover:bg-gray-100 hover:text-primary transition-colors"
                         title="View Invoice"
                       >

@@ -139,7 +139,7 @@ const Invoice: React.FC = () => {
       </div>
 
       <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-8 md:p-12 print:shadow-none print:p-0">
-        <div className="flex flex-col md:flex-row justify-between gap-8 pb-8 border-b border-dashed border-gray-200">
+        <div className="flex flex-col md:flex-row print:flex-col justify-between gap-8 pb-8 border-b border-dashed border-gray-200">
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-3">
               <div className="size-16 rounded-full flex items-center justify-center overflow-hidden bg-white border border-gray-100">
@@ -156,16 +156,16 @@ const Invoice: React.FC = () => {
               <p>(555) 123-4567 | support@phoenixgarage.com</p>
             </div>
           </div>
-          <div className="flex flex-col items-start md:items-end gap-1">
+          <div className="flex flex-col items-start md:items-end print:items-start gap-1">
             <h3 className="text-2xl font-bold text-slate-900">INV-{job.id.split('-')[1]}</h3>
-            <div className="text-sm text-slate-500 text-right mt-1 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
+            <div className="text-sm text-slate-500 text-right print:text-left mt-1 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
               <span className="text-slate-400 font-medium">Issued Date:</span>
               <span className="font-medium text-slate-700">{job.date}</span>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 py-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 print:grid-cols-1 gap-8 py-8">
           <div className="flex flex-col gap-3">
             <h4 className="text-xs font-bold uppercase text-slate-400 tracking-wider">Bill To</h4>
             <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
@@ -249,58 +249,55 @@ const Invoice: React.FC = () => {
           </div>
         )}
 
-        <div className="overflow-x-auto rounded-lg border border-gray-200 mb-8">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="py-3 px-4 text-xs font-semibold uppercase text-slate-500">Description</th>
-                <th className="py-3 px-4 text-xs font-semibold uppercase text-slate-500 w-32">Type</th>
-                <th className="py-3 px-4 text-xs font-semibold uppercase text-slate-500 text-right w-24">Qty</th>
-                <th className="py-3 px-4 text-xs font-semibold uppercase text-slate-500 text-right w-32">Amount</th>
-                {isEditing && <th className="no-print py-3 px-4 w-10"></th>}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {/* Fallback Display if NOT editing and NO items (legacy jobs) */}
-              {!isEditing && items.length === 0 && job.complaints && job.complaints.map((c: string, i: number) => (
-                <tr key={i} className="hover:bg-gray-50/50">
-                  <td className="py-4 px-4 text-sm font-medium text-slate-900">{c} <span className="text-xs text-gray-400 block">General Service</span></td>
-                  <td className="py-4 px-4"><span className="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded">Labour</span></td>
-                  <td className="py-4 px-4 text-right text-sm font-mono">1</td>
-                  <td className="py-4 px-4 text-right text-sm font-mono opacity-50">--</td>
-                </tr>
-              ))}
+        {/* Grouped Items Table */}
+        <div className="mb-8">
+          {/* Header */}
+          <div className="grid grid-cols-12 gap-4 border-b-2 border-slate-900 pb-2 mb-4 text-xs font-bold uppercase text-slate-900 tracking-wider">
+            <div className="col-span-6">Description</div>
+            <div className="col-span-2 text-right">Qty/Hrs</div>
+            <div className="col-span-2 text-right">Rate</div>
+            <div className="col-span-2 text-right">Amount</div>
+          </div>
 
-              {/* Active Items */}
-              {items.map((item, i) => (
-                <tr key={i} className="hover:bg-gray-50/50 group">
-                  <td className="py-4 px-4">
-                    <p className="text-sm font-medium text-slate-900">{item.description}</p>
-                    <span className="text-xs text-slate-500">{item.category}</span>
-                  </td>
-                  <td className="py-4 px-4">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${item.type === 'Labour' ? 'bg-blue-50 text-blue-700' :
-                      item.type === 'Part' ? 'bg-purple-50 text-purple-700' :
-                        'bg-gray-100 text-gray-800'
-                      }`}>
-                      {item.type}
-                    </span>
-                  </td>
-                  <td className="py-4 px-4 text-sm text-slate-700 text-right font-mono">{item.quantity}</td>
-                  <td className="py-4 px-4 text-sm font-semibold text-slate-900 text-right font-mono">
-                    ₹{item.total.toFixed(2)}
-                  </td>
-                  {isEditing && (
-                    <td className="no-print py-4 px-4 text-right">
-                      <button onClick={() => handleRemoveItem(item.id)} className="text-red-400 hover:text-red-600">
-                        <span className="material-symbols-outlined text-[20px]">delete</span>
-                      </button>
-                    </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          {[...new Set(items.map(i => i.category))].sort().map(category => {
+            const categoryItems = items.filter(i => i.category === category);
+            const categoryTotal = categoryItems.reduce((sum, i) => sum + i.total, 0);
+
+            return (
+              <div key={category} className="mb-6">
+                {/* Category Header */}
+                <div className="bg-gray-100 px-3 py-1 text-xs font-bold uppercase tracking-wider text-slate-900 mb-2 border-l-4 border-slate-900">
+                  Category: {category}
+                </div>
+
+                {categoryItems.map(item => (
+                  <div key={item.id} className="grid grid-cols-12 gap-4 py-3 border-b border-gray-100 text-sm group">
+                    <div className="col-span-6">
+                      <p className="font-bold text-slate-900">{item.description}</p>
+                      {/* Optional extra text if available, or just generic */}
+                      <p className="text-xs text-slate-500">{item.type} - {item.id ? 'Item' : 'Service'}</p>
+                    </div>
+                    <div className="col-span-2 text-right font-mono text-slate-600">{item.quantity}</div>
+                    <div className="col-span-2 text-right font-mono text-slate-600">₹{item.unitPrice.toFixed(2)}</div>
+                    <div className="col-span-2 text-right font-bold font-mono text-slate-900">
+                      ₹{item.total.toFixed(2)}
+                      {isEditing && (
+                        <button onClick={() => handleRemoveItem(item.id)} className="ml-2 text-red-400 hover:text-red-600 no-print">
+                          <span className="material-symbols-outlined text-[16px] align-middle">delete</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+
+                {/* Category Subtotal */}
+                <div className="flex justify-end pt-2">
+                  <div className="text-xs uppercase font-bold text-slate-500 mr-4">Subtotal: {category}</div>
+                  <div className="text-sm font-bold font-mono text-slate-900">₹{categoryTotal.toFixed(2)}</div>
+                </div>
+              </div>
+            );
+          })}
         </div>
 
         <div className="flex flex-col md:flex-row justify-end items-end gap-12">
@@ -308,43 +305,80 @@ const Invoice: React.FC = () => {
             {/* Total Logic */}
             {(items.length > 0 || isEditing) ? (
               <>
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-slate-500 font-medium">Subtotal</span>
-                  <span className="text-slate-900 font-semibold font-mono">₹{calculateTotal().toFixed(2)}</span>
+                <div className="flex justify-between items-center text-sm border-t border-gray-100 pt-3">
+                  <span className="text-slate-900 font-bold">Combined Subtotal</span>
+                  <span className="text-slate-900 font-bold font-mono">₹{calculateTotal().toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between items-center text-sm border-b border-gray-100 pb-3">
+                <div className="flex justify-between items-center text-sm pb-3">
                   <span className="text-slate-500 font-medium">Tax (0%)</span>
                   <span className="text-slate-900 font-semibold font-mono">₹0.00</span>
                 </div>
-                <div className="flex justify-between items-center pt-2">
-                  <span className="text-slate-900 font-bold text-lg">Grand Total</span>
-                  <span className="text-primary font-black text-2xl font-mono border-b-4 border-primary/20 pb-1">₹{calculateTotal().toFixed(2)}</span>
+                <div className="flex justify-between items-center bg-slate-900 text-white p-3 rounded">
+                  <span className="font-black text-lg uppercase tracking-wide">Grand Total</span>
+                  <span className="font-black text-2xl font-mono">₹{calculateTotal().toFixed(2)}</span>
                 </div>
               </>
             ) : (
-              <div className="flex justify-between items-center pt-2">
-                <span className="text-slate-900 font-bold text-lg">Grand Total</span>
-                <span className="text-primary font-black text-2xl font-mono border-b-4 border-primary/20 pb-1">₹{job.totalAmount?.toFixed(2) || '0.00'}</span>
+              <div className="flex justify-between items-center bg-slate-900 text-white p-3 rounded">
+                <span className="font-black text-lg uppercase tracking-wide">Grand Total</span>
+                <span className="font-black text-2xl font-mono">₹{job.totalAmount?.toFixed(2) || '0.00'}</span>
               </div>
             )}
           </div>
         </div>
 
-        <div className="mt-16 pt-8 border-t border-gray-200 flex flex-col md:flex-row justify-between items-end gap-8">
-          <div className="max-w-md">
+        <div className="mt-16 pt-8 border-t border-gray-200 flex flex-col md:flex-row print:flex-col justify-between items-end print:items-start gap-8">
+          <div className="max-w-md print:max-w-full">
             <h5 className="text-sm font-bold text-slate-900 mb-2">Terms & Conditions</h5>
             <p className="text-xs text-slate-500 leading-relaxed">
               Payment is due upon receipt. Warranty on parts and labour is 6 months or 5,000 miles.
               We appreciate your business!
             </p>
           </div>
-          <div className="flex flex-col gap-2 w-full md:w-64">
+          <div className="flex flex-col gap-2 w-full md:w-64 print:w-64 print:self-center print:mt-12">
             <div className="h-16 border-b border-slate-900 w-full mb-2"></div>
             <p className="text-xs text-center text-slate-500 font-medium uppercase tracking-wider">Authorized Signature</p>
           </div>
         </div>
       </div>
-    </div>
+
+
+      <style>{`
+        @media print {
+          @page {
+            margin: 0;
+            size: auto;
+          }
+          body {
+            margin: 0;
+            padding: 0;
+            background: white !important;
+          }
+          /* Reset container heights/overflows to prevent scrollbars */
+          html, body, #root, main, div {
+            overflow: visible !important;
+            height: auto !important;
+          }
+          
+          /* Hide Sidebar and other non-print elements globally if not already handled */
+          .no-print, nav, aside {
+            display: none !important;
+          }
+
+          /* Main container padding for print */
+          .print\\:p-0 {
+            padding: 40px !important;
+            border: none !important;
+            box-shadow: none !important;
+          }
+          
+          /* Hide scrollbars */
+          ::-webkit-scrollbar {
+            display: none;
+          }
+        }
+      `}</style>
+    </div >
   );
 };
 
