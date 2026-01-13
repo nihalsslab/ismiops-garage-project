@@ -67,6 +67,20 @@ export const api = {
         return this.post('updateJob', { id, updates });
     },
 
+    async getInvoiceItems(jobId: string) {
+        if (!API_URL) return { status: 'error', message: 'API URL missing' };
+        try {
+            const res = await fetch(`${API_URL}?action=getInvoiceItems&jobId=${jobId}`);
+            return await res.json();
+        } catch (e) {
+            return { status: 'error', message: e.toString() };
+        }
+    },
+
+    async saveInvoiceItems(jobId: string, items: any[]) {
+        return this.post('saveInvoiceItems', { jobId, items });
+    },
+
     async uploadImage(file: File) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();

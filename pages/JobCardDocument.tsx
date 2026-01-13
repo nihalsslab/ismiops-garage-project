@@ -107,11 +107,12 @@ const JobCardDocument: React.FC = () => {
                             <img src={logo} alt="Logo" className="h-8 w-8 object-cover rounded-full" />
                             <div>
                                 <h2 className="text-[#F4B400] text-xl font-black leading-none uppercase tracking-wide">PHOENIX</h2>
-                                <h3 className="text-black text-[10px] font-bold leading-tight uppercase tracking-wider">MULTY BRAND GARAGE</h3>
+                                <h3 className="text-black text-[10px] font-bold leading-tight uppercase tracking-wider">MULTI BRAND GARAGE</h3>
                             </div>
                         </div>
-                        <p className="text-xs text-gray-600">123 Garage Lane, Phoenix, AZ</p>
-                        <p className="text-xs text-gray-600">Date: <span className="font-bold">{job.date}</span></p>
+                        <p className="text-xs text-gray-600 font-bold">AMMINIKKAD, AMMINIKKAD, 679322</p>
+                        <p className="text-xs text-gray-600 font-bold">Malappuram, Kerala ph: 9847805330</p>
+                        <p className="text-xs text-gray-600 mt-1">Date: <span className="font-bold">{job.date}</span></p>
                     </div>
                 </div>
 

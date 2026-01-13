@@ -24,11 +24,13 @@ export interface Part {
 }
 
 // Categories as requested
+// Categories as requested
 export const SERVICE_CATEGORIES = [
-  'General Service', 'Engine Labour', 'Brake Labour', 'Clutch Labour', 'Suspension Labour', 'Electrical Labour', 'AC Service Labour', 'Wheel Alignment / Balancing', 'Washing / Detailing', 'Inspection / Diagnosis', // Labour
-  'Engine Parts', 'Brake Parts', 'Clutch Parts', 'Suspension Parts', 'Electrical Parts', 'AC Parts', 'Filters (Oil / Air / Fuel / AC)', 'Belts & Hoses', 'Battery', 'Tyres', // Parts
-  'Engine Oil', 'Gear Oil', 'Brake Oil', 'Coolant', 'Power Steering Oil', 'Grease', 'Washer Fluid', // Fluids
-  'Pickup & Drop', 'Emergency Service', 'Outside Work', // Extra
+  'Engine',
+  'Brake',
+  'Electrical',
+  'Suspension',
+  'Body',
   'Other'
 ] as const;
 

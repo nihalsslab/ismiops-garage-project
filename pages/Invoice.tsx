@@ -26,20 +26,40 @@ const Invoice: React.FC = () => {
     unitPrice: 0
   });
 
+  // Inventory State
+  const [inventory, setInventory] = React.useState<any[]>([]);
+
   React.useEffect(() => {
     fetchJobDetails();
+    fetchInventory(); // Fetch inventory for autocomplete
     if (new URLSearchParams(window.location.search).get('autoprint') === 'true') {
       setTimeout(() => window.print(), 1000);
     }
   }, [id]);
 
+  const fetchInventory = async () => {
+    const res = await api.getInventory();
+    if (res.status === 'success' && Array.isArray(res.data)) {
+      setInventory(res.data);
+    }
+  };
+
   const fetchJobDetails = async () => {
+    // 1. Fetch Job Metadata
     const res = await api.getJobs();
     if (res.status === 'success') {
       const found = res.data.find((j: any) => j.id === id);
       if (found) {
         setJob(found);
-        setItems(found.lineItems || []);
+
+        // 2. Fetch Invoice Items from dedicated sheet
+        const invRes = await api.getInvoiceItems(found.id);
+        if (invRes.status === 'success' && invRes.data && invRes.data.length > 0) {
+          setItems(invRes.data);
+        } else {
+          // Fallback to legacy items if invoice sheet is empty
+          setItems(found.lineItems || []);
+        }
       } else {
         alert('Job not found!');
         navigate('/jobs');
@@ -79,13 +99,16 @@ const Invoice: React.FC = () => {
     setSaving(true);
     const totalAmount = items.reduce((sum, item) => sum + item.total, 0);
 
-    // Update Job with new Items and Total
-    const res = await api.updateJob(job.id, {
-      lineItems: items,
+    // 1. Save Line Items to dedicated Invoice Sheet
+    const invRes = await api.saveInvoiceItems(job.id, items);
+
+    // 2. Update Job Meta (Total Amount) on Jobs Sheet
+    const jobRes = await api.updateJob(job.id, {
       totalAmount: totalAmount
+      // We don't save lineItems to Jobs sheet anymore to avoid duplication/limit issues
     });
 
-    if (res.status === 'success') {
+    if (invRes.status === 'success' && jobRes.status === 'success') {
       setJob({ ...job, lineItems: items, totalAmount });
       setIsEditing(false);
     } else {
@@ -95,6 +118,21 @@ const Invoice: React.FC = () => {
   };
 
   const calculateTotal = () => items.reduce((sum, item) => sum + item.total, 0);
+
+  // Handle Part Selection from Datalist
+  const handleDescriptionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    const updates: any = { description: val };
+
+    // Auto-fill price if it matches a part exactly
+    if (newItem.type === 'Part') {
+      const part = inventory.find(p => p.name === val);
+      if (part) {
+        updates.unitPrice = part.sellingPrice;
+      }
+    }
+    setNewItem({ ...newItem, ...updates });
+  };
 
   if (loading) return <div className="p-8">Loading Invoice...</div>;
   if (!job) return null;
@@ -138,49 +176,50 @@ const Invoice: React.FC = () => {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-8 md:p-12 print:shadow-none print:p-0">
-        <div className="flex flex-col md:flex-row print:flex-col justify-between gap-8 pb-8 border-b border-dashed border-gray-200">
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center gap-3">
-              <div className="size-16 rounded-full flex items-center justify-center overflow-hidden bg-white border border-gray-100">
+      <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-8 md:p-12 print:shadow-none print:p-0 print:block">
+        {/* Header Section - Compact for Print */}
+        <div className="flex flex-col md:flex-row print:flex-row justify-between gap-8 print:gap-2 pb-8 print:pb-2 border-b border-dashed border-gray-200">
+          <div className="flex flex-col gap-4 print:gap-1">
+            <div className="flex items-center gap-3 print:gap-2">
+              <div className="size-16 print:size-10 rounded-full flex items-center justify-center overflow-hidden bg-white border border-gray-100">
                 <img src={logo} alt="Phoenix Garage" className="w-full h-full object-cover" />
               </div>
               <div className="flex flex-col">
-                <h1 className="text-[#F4B400] text-xl font-black leading-none uppercase tracking-wide">PHOENIX</h1>
-                <h2 className="text-slate-900 text-xs font-bold leading-tight uppercase tracking-wider">MULTY BRAND GARAGE</h2>
+                <h1 className="text-[#F4B400] text-xl print:text-sm font-black leading-none uppercase tracking-wide">PHOENIX</h1>
+                <h2 className="text-slate-900 text-xs print:text-[8px] font-bold leading-tight uppercase tracking-wider">MULTI BRAND GARAGE</h2>
               </div>
             </div>
-            <div className="text-sm text-slate-500 leading-relaxed pl-1">
-              <p>123 Garage Lane, Industrial District</p>
-              <p>Phoenix, AZ 85001</p>
-              <p>(555) 123-4567 | support@phoenixgarage.com</p>
+            <div className="text-sm print:text-[9px] text-slate-500 leading-relaxed pl-1">
+              <p className="font-bold">AMMINIKKAD, AMMINIKKAD, 679322</p>
+              <p className="font-bold">Malappuram, Kerala ph: 9847805330</p>
             </div>
           </div>
-          <div className="flex flex-col items-start md:items-end print:items-start gap-1">
-            <h3 className="text-2xl font-bold text-slate-900">INV-{job.id.split('-')[1]}</h3>
-            <div className="text-sm text-slate-500 text-right print:text-left mt-1 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
+          <div className="flex flex-col items-start md:items-end print:items-end gap-1 print:gap-0">
+            <h3 className="text-2xl print:text-lg font-bold text-slate-900">INV-{job.id.split('-')[1]}</h3>
+            <div className="text-sm print:text-[9px] text-slate-500 text-right mt-1 print:mt-0 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
               <span className="text-slate-400 font-medium">Issued Date:</span>
               <span className="font-medium text-slate-700">{job.date}</span>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 print:grid-cols-1 gap-8 py-8">
-          <div className="flex flex-col gap-3">
-            <h4 className="text-xs font-bold uppercase text-slate-400 tracking-wider">Bill To</h4>
-            <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
-              <p className="font-bold text-slate-900 text-lg">{job.customerName}</p>
-              <p className="text-slate-600 text-sm mt-2 flex items-center gap-2">
-                <span className="material-symbols-outlined text-[16px]">phone</span> {job.phone}
+        {/* Details Section - Compact for Print */}
+        <div className="grid grid-cols-1 md:grid-cols-2 print:grid-cols-2 gap-8 print:gap-4 py-8 print:py-2">
+          <div className="flex flex-col gap-3 print:gap-1">
+            <h4 className="text-xs print:text-[8px] font-bold uppercase text-slate-400 tracking-wider">Bill To</h4>
+            <div className="bg-gray-50 rounded-lg p-4 print:p-2 border border-gray-100">
+              <p className="font-bold text-slate-900 text-lg print:text-xs">{job.customerName}</p>
+              <p className="text-slate-600 text-sm print:text-[9px] mt-2 print:mt-0 flex items-center gap-2">
+                <span className="material-symbols-outlined text-[16px] print:text-[12px] print:hidden">phone</span> {job.phone}
               </p>
             </div>
           </div>
-          <div className="flex flex-col gap-3">
-            <h4 className="text-xs font-bold uppercase text-slate-400 tracking-wider">Vehicle Details</h4>
-            <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
-              <p className="font-bold text-slate-900 text-lg">{job.brand} {job.model}</p>
-              <p className="text-slate-600 text-sm mt-1">{job.vehicle || `${job.brand} ${job.model}`}
-                {job.fuelType && <span className="ml-2 text-xs text-gray-400">({job.fuelType})</span>}
+          <div className="flex flex-col gap-3 print:gap-1">
+            <h4 className="text-xs print:text-[8px] font-bold uppercase text-slate-400 tracking-wider">Vehicle Details</h4>
+            <div className="bg-gray-50 rounded-lg p-4 print:p-2 border border-gray-100">
+              <p className="font-bold text-slate-900 text-lg print:text-xs">{job.brand} {job.model}</p>
+              <p className="text-slate-600 text-sm print:text-[9px] mt-1 print:mt-0">{job.vehicle || `${job.brand} ${job.model}`}
+                {job.fuelType && <span className="ml-2 text-xs print:text-[8px] text-gray-400">({job.fuelType})</span>}
               </p>
             </div>
           </div>
@@ -189,38 +228,58 @@ const Invoice: React.FC = () => {
         {/* --- EDIT MODE INPUT --- */}
         {isEditing && (
           <div className="no-print bg-blue-50/50 border border-blue-100 p-4 rounded-lg mb-6 flex flex-wrap gap-4 items-end">
-            <div className="flex-1 min-w-[200px]">
-              <label className="block text-xs font-bold text-gray-500 mb-1">Description</label>
-              <input
-                type="text"
-                className="w-full border rounded p-2 text-sm"
-                placeholder="Part name or Service..."
-                value={newItem.description}
-                onChange={e => setNewItem({ ...newItem, description: e.target.value })}
-              />
-            </div>
-            <div className="w-40">
-              <label className="block text-xs font-bold text-gray-500 mb-1">Category</label>
-              <select
-                className="w-full border rounded p-2 text-sm"
-                value={newItem.category}
-                onChange={e => setNewItem({ ...newItem, category: e.target.value as any })}
-              >
-                {SERVICE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
+
+            {/* 1. Type Selection (Now First) */}
             <div className="w-24">
-              <label className="block text-xs font-bold text-gray-500 mb-1">Type</label>
+              <label className="block text-xs font-bold text-gray-500 mb-1">Type *</label>
               <select
                 className="w-full border rounded p-2 text-sm"
                 value={newItem.type}
                 onChange={e => setNewItem({ ...newItem, type: e.target.value as any })}
               >
-                <option value="Part">Part</option>
                 <option value="Labour">Labour</option>
+                <option value="Part">Part</option>
                 <option value="Fluid">Fluid</option>
                 <option value="Other">Other</option>
               </select>
+            </div>
+
+            {/* 2. Category Selection */}
+            <div className="w-40">
+              <label className="block text-xs font-bold text-gray-500 mb-1">Category *</label>
+              <select
+                className="w-full border rounded p-2 text-sm"
+                value={newItem.category}
+                onChange={e => setNewItem({ ...newItem, category: e.target.value as any })}
+              >
+                <option value="" disabled>Select category...</option>
+                {SERVICE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+
+            {/* 3. Description (Filtered Datalist if Part) */}
+            <div className="flex-1 min-w-[200px]">
+              <label className="block text-xs font-bold text-gray-500 mb-1">Description *</label>
+              <input
+                type="text"
+                list={newItem.type === 'Part' ? "filtered-parts" : ""}
+                className="w-full border rounded p-2 text-sm"
+                placeholder={newItem.type === 'Part' ? `Search ${newItem.category || ''} Parts...` : "Service description..."}
+                value={newItem.description}
+                onChange={handleDescriptionChange}
+                disabled={newItem.type === 'Part' && !newItem.category}
+              />
+              {newItem.type === 'Part' && (
+                <datalist id="filtered-parts">
+                  {inventory
+                    .filter(part => !newItem.category || part.category === newItem.category)
+                    .map(part => (
+                      <option key={part.id} value={part.name}>
+                        SKU: {part.sku} | Stock: {part.stockQty} | ₹{part.sellingPrice}
+                      </option>
+                    ))}
+                </datalist>
+              )}
             </div>
             <div className="w-20">
               <label className="block text-xs font-bold text-gray-500 mb-1">Qty</label>
@@ -249,10 +308,10 @@ const Invoice: React.FC = () => {
           </div>
         )}
 
-        {/* Grouped Items Table */}
-        <div className="mb-8">
+        {/* Grouped Items Table - Smaller Text for Print */}
+        <div className="mb-8 print:mb-1">
           {/* Header */}
-          <div className="grid grid-cols-12 gap-4 border-b-2 border-slate-900 pb-2 mb-4 text-xs font-bold uppercase text-slate-900 tracking-wider">
+          <div className="grid grid-cols-12 gap-4 print:gap-2 border-b-2 border-slate-900 pb-2 mb-4 print:mb-1 text-xs print:text-[8px] font-bold uppercase text-slate-900 tracking-wider">
             <div className="col-span-6">Description</div>
             <div className="col-span-2 text-right">Qty/Hrs</div>
             <div className="col-span-2 text-right">Rate</div>
@@ -264,18 +323,18 @@ const Invoice: React.FC = () => {
             const categoryTotal = categoryItems.reduce((sum, i) => sum + i.total, 0);
 
             return (
-              <div key={category} className="mb-6">
+              <div key={category} className="mb-6 print:mb-1">
                 {/* Category Header */}
-                <div className="bg-gray-100 px-3 py-1 text-xs font-bold uppercase tracking-wider text-slate-900 mb-2 border-l-4 border-slate-900">
+                <div className="bg-gray-100 px-3 py-1 print:py-0 text-xs print:text-[8px] font-bold uppercase tracking-wider text-slate-900 mb-2 print:mb-0.5 border-l-4 border-slate-900">
                   Category: {category}
                 </div>
 
                 {categoryItems.map(item => (
-                  <div key={item.id} className="grid grid-cols-12 gap-4 py-3 border-b border-gray-100 text-sm group">
+                  <div key={item.id} className="grid grid-cols-12 gap-4 print:gap-2 py-3 print:py-0.5 border-b border-gray-100 text-sm print:text-[9px] group">
                     <div className="col-span-6">
                       <p className="font-bold text-slate-900">{item.description}</p>
                       {/* Optional extra text if available, or just generic */}
-                      <p className="text-xs text-slate-500">{item.type} - {item.id ? 'Item' : 'Service'}</p>
+                      <p className="text-xs print:text-[7px] text-slate-500">{item.type} - {item.id ? 'Item' : 'Service'}</p>
                     </div>
                     <div className="col-span-2 text-right font-mono text-slate-600">{item.quantity}</div>
                     <div className="col-span-2 text-right font-mono text-slate-600">₹{item.unitPrice.toFixed(2)}</div>
@@ -291,9 +350,9 @@ const Invoice: React.FC = () => {
                 ))}
 
                 {/* Category Subtotal */}
-                <div className="flex justify-end pt-2">
-                  <div className="text-xs uppercase font-bold text-slate-500 mr-4">Subtotal: {category}</div>
-                  <div className="text-sm font-bold font-mono text-slate-900">₹{categoryTotal.toFixed(2)}</div>
+                <div className="flex justify-end pt-2 print:pt-0.5">
+                  <div className="text-xs print:text-[8px] uppercase font-bold text-slate-500 mr-4">Subtotal: {category}</div>
+                  <div className="text-sm print:text-[9px] font-bold font-mono text-slate-900">₹{categoryTotal.toFixed(2)}</div>
                 </div>
               </div>
             );
@@ -327,15 +386,8 @@ const Invoice: React.FC = () => {
           </div>
         </div>
 
-        <div className="mt-16 pt-8 border-t border-gray-200 flex flex-col md:flex-row print:flex-col justify-between items-end print:items-start gap-8">
-          <div className="max-w-md print:max-w-full">
-            <h5 className="text-sm font-bold text-slate-900 mb-2">Terms & Conditions</h5>
-            <p className="text-xs text-slate-500 leading-relaxed">
-              Payment is due upon receipt. Warranty on parts and labour is 6 months or 5,000 miles.
-              We appreciate your business!
-            </p>
-          </div>
-          <div className="flex flex-col gap-2 w-full md:w-64 print:w-64 print:self-center print:mt-12">
+        <div className="mt-16 pt-8 print:mt-4 print:pt-4 border-t border-gray-200 flex flex-col md:flex-row justify-end items-center md:items-end print:justify-center print:items-center gap-8 print:gap-2 page-break-avoid">
+          <div className="flex flex-col gap-2 w-64 print:mt-4">
             <div className="h-16 border-b border-slate-900 w-full mb-2"></div>
             <p className="text-xs text-center text-slate-500 font-medium uppercase tracking-wider">Authorized Signature</p>
           </div>
@@ -375,6 +427,12 @@ const Invoice: React.FC = () => {
           /* Hide scrollbars */
           ::-webkit-scrollbar {
             display: none;
+          }
+
+          /* Avoid page breaks inside elements */
+          .page-break-avoid {
+            break-inside: avoid;
+            page-break-inside: avoid;
           }
         }
       `}</style>

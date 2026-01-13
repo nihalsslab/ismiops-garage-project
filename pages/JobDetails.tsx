@@ -212,11 +212,14 @@ const JobDetails: React.FC = () => {
                         Created on {new Date(job.date).toLocaleDateString()} • Service Advisor: {job.customerName.split(' ')[0]}
                     </div>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
                     <span className={`px-4 py-2 rounded-lg font-bold text-sm ${job.paymentStatus === 'Paid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                         Payment: {job.paymentStatus || 'Unpaid'}
                     </span>
-                    <Link to={`/job-card/${job.id}`} target="_blank" className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-900 font-bold bg-white border border-gray-200 rounded-lg hover:bg-gray-50">
+                    <Link to={`/job-card/${job.id}`} target="_blank" className="flex items-center justify-center p-2 text-gray-600 hover:text-blue-600 font-bold bg-white border border-gray-200 rounded-lg hover:bg-gray-50" title="View Job Card">
+                        <span className="material-symbols-outlined">visibility</span>
+                    </Link>
+                    <Link to={`/job-card/${job.id}?autoprint=true`} target="_blank" className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-900 font-bold bg-white border border-gray-200 rounded-lg hover:bg-gray-50">
                         <span className="material-symbols-outlined text-sm">print</span> Print Job Card
                     </Link>
                 </div>

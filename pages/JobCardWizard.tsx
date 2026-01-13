@@ -18,7 +18,8 @@ const JobCardWizard: React.FC = () => {
     fuelLevel: 50,
     vehicleImages: [] as string[],
     complaints: [] as string[],
-    notes: ''
+    notes: '',
+    km: ''
   });
 
   const [saving, setSaving] = useState(false);
@@ -35,6 +36,7 @@ const JobCardWizard: React.FC = () => {
       if (!formData.brand.trim()) return alert('Please select or enter a Brand');
       if (!formData.model.trim()) return alert('Please select or enter a Model');
       if (!formData.numberPlate.trim()) return alert('Please enter Number Plate');
+      if (!formData.km?.trim()) return alert('Please enter Current KM');
       // Fuel Type is now optional but recommended
     }
     if (step === 3) {
@@ -61,7 +63,8 @@ const JobCardWizard: React.FC = () => {
     const res = await api.addJob(jobData);
     if (res.status === 'success') {
       if (shouldPrint) {
-        navigate(`/job-card/${jobData.id}?autoprint=true`);
+        window.open(`#/job-card/${jobData.id}?autoprint=true`, '_blank');
+        navigate('/jobs');
       } else {
         navigate('/jobs');
       }
@@ -188,6 +191,18 @@ const JobCardWizard: React.FC = () => {
                 placeholder="e.g. KL 01 AB 1234"
                 value={formData.numberPlate}
                 onChange={(e) => setFormData({ ...formData, numberPlate: e.target.value.toUpperCase() })}
+              />
+            </div>
+
+            {/* Current KM Input */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 uppercase mb-2">Current KM</label>
+              <input
+                type="text"
+                className="w-full rounded-lg border-gray-200 h-14 text-lg p-4 font-mono focus:ring-primary focus:border-primary placeholder:normal-case"
+                placeholder="e.g. 45000"
+                value={formData.km}
+                onChange={(e) => setFormData({ ...formData, km: e.target.value })}
               />
             </div>
 
@@ -413,6 +428,7 @@ const JobCardWizard: React.FC = () => {
                 <p className="text-xs font-bold text-gray-400 uppercase mb-2">Vehicle Details</p>
                 <p className="font-bold text-lg">{formData.brand} {formData.model}</p>
                 <p className="text-sm font-mono text-gray-600 uppercase mt-1">{formData.numberPlate}</p>
+                <p className="text-sm font-mono text-gray-500 mt-1">KM: {formData.km}</p>
                 {formData.vehicleImages.length > 0 && (
                   <div className="flex gap-2 mt-3 overflow-x-auto pb-2">
                     {formData.vehicleImages.map((img, i) => (

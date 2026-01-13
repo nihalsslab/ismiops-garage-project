@@ -11,10 +11,13 @@ function getSheet(sheetName) {
     sheet = ss.insertSheet(sheetName);
     // Initialize headers based on sheet name
     if (sheetName === 'Inventory') {
-      // Added 'brand' and 'notes'
       sheet.appendRow(['id', 'name', 'sku', 'category', 'brand', 'stockQty', 'reorderLevel', 'costPrice', 'sellingPrice', 'status', 'notes', 'imageUrl']);
     } else if (sheetName === 'Jobs') {
-      sheet.appendRow(['id', 'date', 'customerName', 'phone', 'brand', 'model', 'numberPlate', 'fuelType', 'fuelLevel', 'vehicleImages', 'status', 'paymentStatus', 'advanceAmount', 'complaints', 'notes', 'lineItems', 'totalAmount']);
+      // Added 'km' to the end
+      sheet.appendRow(['id', 'date', 'customerName', 'phone', 'brand', 'model', 'numberPlate', 'fuelType', 'fuelLevel', 'vehicleImages', 'status', 'paymentStatus', 'advanceAmount', 'complaints', 'notes', 'lineItems', 'totalAmount', 'km']);
+    } else if (sheetName === 'invoice') {
+      // New Invoice Sheet
+      sheet.appendRow(['jobId', 'description', 'category', 'quantity', 'unitPrice', 'total', 'type']);
     }
   }
   return sheet;
@@ -29,6 +32,8 @@ function doGet(e) {
       return getData('Inventory');
     } else if (action === 'getJobs') {
       return getData('Jobs');
+    } else if (action === 'getInvoiceItems') {
+      return getInvoiceItems(e.parameter.jobId);
     }
 
     return jsonResponse({ status: 'error', message: 'Invalid action' });
@@ -55,6 +60,8 @@ function doPost(e) {
       return updateRow('Inventory', data.payload.id, data.payload.updates);
     } else if (action === 'updateJob') {
       return updateRow('Jobs', data.payload.id, data.payload.updates);
+    } else if (action === 'saveInvoiceItems') {
+      return saveInvoiceItems(data.payload.jobId, data.payload.items);
     } else if (action === 'uploadImage') {
       return uploadImage(data.payload);
     }
@@ -65,6 +72,107 @@ function doPost(e) {
   }
 }
 
+// --- Invoice Specific Logic ---
+
+function getInvoiceItems(jobId) {
+  const sheet = getSheet('invoice');
+  const data = sheet.getDataRange().getValues();
+  const headers = data.shift(); // remove headers (jobId, description...)
+
+  // Columns: 0=jobId, 1=description, 2=category, 3=quantity, 4=unitPrice, 5=total, 6=type
+  const items = data
+    .filter(row => String(row[0]) === String(jobId))
+    .map(row => ({
+      id: Math.random().toString(36).substr(2, 9), // Generate temp ID for frontend
+      description: row[1],
+      category: row[2],
+      quantity: Number(row[3]),
+      unitPrice: Number(row[4]),
+      total: Number(row[5]),
+      type: row[6] || 'Labour'
+    }));
+
+  return jsonResponse({ status: 'success', data: items });
+}
+
+function saveInvoiceItems(jobId, items) {
+  const sheet = getSheet('invoice');
+  const data = sheet.getDataRange().getValues();
+
+  // 1. Get Old Items for Diffing (Stock Management)
+  const oldItems = data
+    .filter(row => String(row[0]) === String(jobId))
+    .map(row => ({
+      description: row[1],
+      quantity: Number(row[3]),
+      type: row[6] || 'Labour'
+    }))
+    .filter(item => item.type === 'Part');
+
+  // 1. Delete existing rows for this jobId
+  // We go backwards to avoid index shifting issues
+  for (let i = data.length - 1; i >= 1; i--) {
+    if (String(data[i][0]) === String(jobId)) {
+      sheet.deleteRow(i + 1);
+    }
+  }
+
+  // 2. Add new items
+  if (items && items.length > 0) {
+    const newRows = items.map(item => [
+      jobId,
+      item.description,
+      item.category,
+      item.quantity,
+      item.unitPrice,
+      item.total,
+      item.type || 'Labour'
+    ]);
+
+    // Check if sheet is empty (only headers), if so appendRow, else getRange...
+    // simpler to just loop appendRow for safety or use getRange for bulk
+    if (newRows.length > 0) {
+      const lastRow = sheet.getLastRow();
+      sheet.getRange(lastRow + 1, 1, newRows.length, newRows[0].length).setValues(newRows);
+    }
+  }
+
+  // 4. Update Inventory Stock (Diff Logic)
+  const inventorySheet = getSheet('Inventory');
+  const invData = inventorySheet.getDataRange().getValues();
+  const invHeaders = invData.shift();
+
+  const nameIdx = invHeaders.indexOf('name');
+  const stockIdx = invHeaders.indexOf('stockQty');
+
+  if (nameIdx !== -1 && stockIdx !== -1) {
+    const stockChanges = {};
+    // Plus: Restore Old Stock
+    oldItems.forEach(item => {
+      stockChanges[item.description] = (stockChanges[item.description] || 0) + item.quantity;
+    });
+    // Minus: Deduct New Stock
+    items.forEach(item => {
+      if (item.type === 'Part') {
+        stockChanges[item.description] = (stockChanges[item.description] || 0) - Number(item.quantity);
+      }
+    });
+    // Write to Sheet
+    for (let i = 0; i < invData.length; i++) {
+      const rowName = invData[i][nameIdx];
+      if (stockChanges[rowName]) {
+        const currentStock = Number(invData[i][stockIdx]) || 0;
+        const newStock = currentStock + stockChanges[rowName];
+        inventorySheet.getRange(i + 2, stockIdx + 1).setValue(newStock);
+      }
+    }
+  }
+
+  return jsonResponse({ status: 'success', message: 'Invoice saved and stock updated' });
+}
+
+// --- Standard Helpers ---
+
 // Helper: Get data as JSON
 function getData(sheetName) {
   const sheet = getSheet(sheetName);
@@ -74,7 +182,6 @@ function getData(sheetName) {
   const data = rows.map(row => {
     let obj = {};
     headers.forEach((header, index) => {
-      // Handle array strings if necessary (e.g. complaints)
       let value = row[index];
       if ((header === 'complaints' || header === 'lineItems' || header === 'vehicleImages') && typeof value === 'string' && value.startsWith('[')) {
         try { value = JSON.parse(value); } catch (e) { }
@@ -88,15 +195,12 @@ function getData(sheetName) {
 }
 
 // Helper: Add Row
-// Optimized to handle missing headers gracefully or just map strict headers
 function addRow(sheetName, payload) {
   const sheet = getSheet(sheetName);
-  // Get latest headers from the sheet
   const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
 
   const newRow = headers.map(header => {
     let value = payload[header];
-    // Convert arrays/objects to string for storage
     if (value && (Array.isArray(value) || typeof value === 'object')) {
       return JSON.stringify(value);
     }
@@ -111,10 +215,9 @@ function addRow(sheetName, payload) {
 function deleteRow(sheetName, id) {
   const sheet = getSheet(sheetName);
   const data = sheet.getDataRange().getValues();
-  // Assume ID is in the first column (index 0)
   for (let i = 1; i < data.length; i++) {
     if (String(data[i][0]) === String(id)) {
-      sheet.deleteRow(i + 1); // 1-based index
+      sheet.deleteRow(i + 1);
       return jsonResponse({ status: 'success', message: 'Deleted successfully' });
     }
   }
@@ -129,13 +232,10 @@ function updateRow(sheetName, id, updates) {
 
   for (let i = 1; i < data.length; i++) {
     if (String(data[i][0]) === String(id)) {
-      // Found the row, update columns
       const rowNumber = i + 1;
-
       Object.keys(updates).forEach(key => {
         const colIndex = headers.indexOf(key);
         if (colIndex !== -1) {
-          // Convert arrays/objects to string if needed
           let value = updates[key];
           if (value && (Array.isArray(value) || typeof value === 'object')) {
             value = JSON.stringify(value);
@@ -143,7 +243,6 @@ function updateRow(sheetName, id, updates) {
           sheet.getRange(rowNumber, colIndex + 1).setValue(value);
         }
       });
-
       return jsonResponse({ status: 'success', message: 'Updated successfully' });
     }
   }
@@ -152,11 +251,10 @@ function updateRow(sheetName, id, updates) {
 
 // Helper: Upload Image to Drive and get lh3 link
 function uploadImage(payload) {
-  const { data, filename, mimeType } = payload; // data is base64 string
+  const { data, filename, mimeType } = payload;
   const folder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
   const blob = Utilities.newBlob(Utilities.base64Decode(data), mimeType, filename);
   const file = folder.createFile(blob);
-
   file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
 
   let lh3Link = '';
@@ -166,7 +264,6 @@ function uploadImage(payload) {
   } catch (e) {
     lh3Link = `https://drive.google.com/thumbnail?id=${file.getId()}&sz=w1000`;
   }
-
   return jsonResponse({ status: 'success', url: lh3Link, fileId: file.getId() });
 }
 
