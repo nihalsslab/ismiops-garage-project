@@ -190,8 +190,8 @@ const Invoice: React.FC = () => {
               </div>
             </div>
             <div className="text-sm print:text-[9px] text-slate-500 leading-relaxed pl-1">
-              <p className="font-bold">AMMINIKKAD, AMMINIKKAD, 679322</p>
-              <p className="font-bold">Malappuram, Kerala ph: 9847805330</p>
+              <p className="font-bold">Perinthalmanna, Malappuram</p>
+              <p className="font-bold">Kerala - 679322 | ph: 9847805330</p>
             </div>
           </div>
           <div className="flex flex-col items-start md:items-end print:items-end gap-1 print:gap-0">

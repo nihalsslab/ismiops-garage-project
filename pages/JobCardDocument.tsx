@@ -110,8 +110,8 @@ const JobCardDocument: React.FC = () => {
                                 <h3 className="text-black text-[10px] font-bold leading-tight uppercase tracking-wider">MULTI BRAND GARAGE</h3>
                             </div>
                         </div>
-                        <p className="text-xs text-gray-600 font-bold">AMMINIKKAD, AMMINIKKAD, 679322</p>
-                        <p className="text-xs text-gray-600 font-bold">Malappuram, Kerala ph: 9847805330</p>
+                        <p className="text-xs text-gray-600 font-bold">Perinthalmanna, Malappuram</p>
+                        <p className="text-xs text-gray-600 font-bold">Kerala - 679322 | ph: 9847805330</p>
                         <p className="text-xs text-gray-600 mt-1">Date: <span className="font-bold">{job.date}</span></p>
                     </div>
                 </div>
