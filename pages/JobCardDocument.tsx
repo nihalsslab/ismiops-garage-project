@@ -106,7 +106,7 @@ const JobCardDocument: React.FC = () => {
                             {/* Small Logo next to Brand Name if desired, or just Brand Name */}
                             <img src={logo} alt="Logo" className="h-8 w-8 object-cover rounded-full" />
                             <div>
-                                <h2 className="text-[#F4B400] text-xl font-black leading-none uppercase tracking-wide">PHOENIX</h2>
+                                <h2 className="text-[#F4B400] text-xl font-black leading-none uppercase tracking-wide">ISMIOPS</h2>
                                 <h3 className="text-black text-[10px] font-bold leading-tight uppercase tracking-wider">MULTI BRAND GARAGE</h3>
                             </div>
                         </div>
@@ -223,7 +223,7 @@ const JobCardDocument: React.FC = () => {
 
                 <div className="flex justify-between items-end mt-8 pt-4 border-t border-gray-900">
                     <p className="text-[10px] text-gray-400 font-bold uppercase">Printed On: {new Date().toLocaleDateString()}</p>
-                    <p className="text-[10px] text-gray-400 font-bold uppercase">Phoenix Multi-Brand Garage © {new Date().getFullYear()}</p>
+                    <p className="text-[10px] text-gray-400 font-bold uppercase">Ismiops Multi-Brand Garage © {new Date().getFullYear()}</p>
                 </div>
 
             </div>

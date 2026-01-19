@@ -37,8 +37,8 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
               <img src={logo} alt="Logo" className="w-full h-full object-cover" />
             </div>
             <div className="flex flex-col overflow-hidden">
-              <h1 className="text-[#F4B400] text-lg font-black leading-none uppercase tracking-wide">PHOENIX</h1>
-              <h2 className="text-black text-[10px] font-bold leading-tight uppercase tracking-wider">MULTY BRAND GARAGE</h2>
+              <h1 className="text-[#F4B400] text-lg font-black leading-none uppercase tracking-wide">ISMIOPS</h1>
+              <h2 className="text-black text-[10px] font-bold leading-tight uppercase tracking-wider">MULTI BRAND GARAGE</h2>
             </div>
           </div>
           <button onClick={onClose} className="md:hidden text-gray-500 hover:text-gray-900">
@@ -95,7 +95,7 @@ const App: React.FC = () => {
               <div className="h-8 w-8 rounded-full overflow-hidden">
                 <img src={logo} alt="Logo" className="w-full h-full object-cover" />
               </div>
-              <span className="font-bold text-gray-900">Phoenix Garage</span>
+              <span className="font-bold text-gray-900">Ismiops Garage</span>
             </div>
           </header>
 

@@ -182,10 +182,10 @@ const Invoice: React.FC = () => {
           <div className="flex flex-col gap-4 print:gap-1">
             <div className="flex items-center gap-3 print:gap-2">
               <div className="size-16 print:size-10 rounded-full flex items-center justify-center overflow-hidden bg-white border border-gray-100">
-                <img src={logo} alt="Phoenix Garage" className="w-full h-full object-cover" />
+                <img src={logo} alt="Ismiops Garage" className="w-full h-full object-cover" />
               </div>
               <div className="flex flex-col">
-                <h1 className="text-[#F4B400] text-xl print:text-sm font-black leading-none uppercase tracking-wide">PHOENIX</h1>
+                <h1 className="text-[#F4B400] text-xl print:text-sm font-black leading-none uppercase tracking-wide">ISMIOPS</h1>
                 <h2 className="text-slate-900 text-xs print:text-[8px] font-bold leading-tight uppercase tracking-wider">MULTI BRAND GARAGE</h2>
               </div>
             </div>
